@@ -1,61 +1,175 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wyświetlanie danych cookies</title>
+<meta charset="UTF-8" />
+<title>Maksymalne pobieranie danych użytkownika - DEMO</title>
 <style>
    body {
      font-family: Arial, sans-serif;
      margin: 20px;
-     text-align: center;
    }
-   #cookie-banner {
-     padding: 20px;
-     border: 1px solid #ccc;
-     background-color: #f9f9f9;
-     margin-bottom: 20px;
-   }
-   #cookie-data {
-     margin-top: 20px;
-     white-space: pre-wrap;
-     background: #f4f4f4;
-     padding: 10px;
-     border: 1px solid #ddd;
+   .container {
+     max-width: 800px;
+     margin: 0 auto;
    }
    button {
-     padding: 10px 20px;
-     font-size: 16px;
+     padding: 10px 15px;
      cursor: pointer;
+     margin-bottom: 20px;
+   }
+   #results {
+     background-color: #f9f9f9;
+     padding: 15px;
+     border: 1px solid #ccc;
+   }
+   .info-item {
+     margin-bottom: 10px;
+     word-break: break-all; /* w razie długich stringów */
+   }
+   .info-label {
+     font-weight: bold;
    }
 </style>
 </head>
 <body>
-<h1>Wyświetlanie danych cookies</h1>
-<div id="cookie-banner">
-<p>Ta strona używa plików cookie. Czy zgadzasz się na ich odczyt i wyświetlenie?</p>
-<button onclick="showCookies()">Akceptuję</button>
-</div>
-<div id="cookie-data" style="display: none;">
-<h2>Twoje dane cookies:</h2>
-<div id="cookies"></div>
+<div class="container">
+<h1>Maksymalne pobieranie danych użytkownika (DEMO)</h1>
+<p>
+     Po kliknięciu przycisku poniżej spróbujemy pobrać szereg informacji o Twojej
+     przeglądarce, urządzeniu oraz lokalizacji (jeśli wyrazisz na to zgodę).
+</p>
+<button id="getDataBtn">Pobierz dane</button>
+<div id="results"></div>
 </div>
 <script>
-   function showCookies() {
-     // Ukryj baner
-     document.getElementById("cookie-banner").style.display = "none";
-     // Pobierz ciasteczka użytkownika
-     const cookies = document.cookie;
-     // Wyświetl dane cookies na stronie
-     const cookieDataDiv = document.getElementById("cookie-data");
-     const cookiesDiv = document.getElementById("cookies");
-     if (cookies) {
-       cookiesDiv.textContent = cookies;
-     } else {
-       cookiesDiv.textContent = "Brak ciasteczek do wyświetlenia.";
-     }
-     cookieDataDiv.style.display = "block";
+   const getDataBtn = document.getElementById('getDataBtn');
+   const resultsDiv = document.getElementById('results');
+   // Prosta funkcja pomocnicza do wyświetlania w #results:
+   function addInfo(label, value) {
+     const p = document.createElement('p');
+     p.className = 'info-item';
+     p.innerHTML = `<span class="info-label">${label}:</span> ${value}`;
+     resultsDiv.appendChild(p);
    }
+   // Funkcja główna uruchamiana po kliknięciu
+   getDataBtn.addEventListener('click', async () => {
+     // Wyczyszczamy poprzednie wyniki
+     resultsDiv.innerHTML = '';
+     // 1. LOKALIZACJA - HTML5 Geolocation (wymaga zgody użytkownika):
+     if ("geolocation" in navigator) {
+       navigator.geolocation.getCurrentPosition(
+         (pos) => {
+           const { latitude, longitude, accuracy } = pos.coords;
+           addInfo('Geolokalizacja - szerokość', latitude);
+           addInfo('Geolokalizacja - długość', longitude);
+           addInfo('Geolokalizacja - dokładność (m)', accuracy);
+         },
+         (err) => {
+           addInfo('Geolokalizacja', `Odmowa lub błąd (${err.message})`);
+         }
+       );
+     } else {
+       addInfo('Geolokalizacja', 'Niedostępna w tej przeglądarce');
+     }
+     // 2. ADRES IP (publiczny) - musimy skorzystać z zewnętrznego API:
+     // (np. https://api.ipify.org?format=json lub inny endpoint)
+     try {
+       const ipRes = await fetch('https://api.ipify.org?format=json');
+       const ipData = await ipRes.json();
+       addInfo('Adres IP (zewnętrzny)', ipData.ip);
+     } catch (err) {
+       addInfo('Adres IP (zewnętrzny)', 'Błąd pobierania API');
+     }
+     // 3. COOKIES
+     // Wczytujemy ciasteczka przypisane do aktualnej domeny (o ile nie są HttpOnly):
+     const allCookies = document.cookie || '(brak lub niedostępne)';
+     addInfo('Cookies', allCookies);
+     // 4. USER AGENT
+     addInfo('User Agent', navigator.userAgent);
+     // 5. JĘZYK PRZEGLĄDARKI
+     const lang = navigator.language || navigator.userLanguage;
+     addInfo('Język przeglądarki', lang);
+     // 6. EKRAN, ROZDZIELCZOŚĆ, GĘSTOŚĆ
+     addInfo('Rozdzielczość ekranu', `${window.screen.width} x ${window.screen.height}`);
+     addInfo('Dostępna przestrzeń (window.innerWidth x window.innerHeight)',
+             `${window.innerWidth} x ${window.innerHeight}`);
+     addInfo('Color depth (głębia kolorów)', window.screen.colorDepth);
+     addInfo('Pixel ratio', window.devicePixelRatio);
+     // 7. PLATFORM, HARDWARE CONCURRENCY, DEVICE MEMORY
+     // (deviceMemory bywa dostępne tylko w Chromium, Chrome for Android, Opera, Edge)
+     addInfo('Platforma (navigator.platform)', navigator.platform || 'n/a');
+     addInfo('Liczba rdzeni CPU (navigator.hardwareConcurrency)',
+             navigator.hardwareConcurrency || 'n/a');
+     addInfo('Pamięć RAM (navigator.deviceMemory)', navigator.deviceMemory
+             ? navigator.deviceMemory + ' GB'
+             : 'n/a');
+     // 8. DO NOT TRACK
+     // Możliwe wartości: '1' (włączone DNT), '0' (wyłączone), 'unspecified' (lub null)
+     addInfo('Do Not Track', navigator.doNotTrack || 'n/a');
+     // 9. CZAS LOKALNY / STREFA CZASOWA
+     const now = new Date();
+     addInfo('Czas lokalny użytkownika', now.toString());
+     addInfo('Strefa czasowa (offset w minutach od UTC)', now.getTimezoneOffset());
+     // 10. BATTERY STATUS API (wymaga połączenia HTTPS i wsparcia w przeglądarce):
+     if (navigator.getBattery) {
+       try {
+         const battery = await navigator.getBattery();
+         addInfo('Poziom baterii', battery.level);
+         addInfo('Czy ładowanie', battery.charging ? 'tak' : 'nie');
+         addInfo('Szacowany czas do pełnego naładowania (s)', battery.chargingTime);
+         addInfo('Szacowany czas do rozładowania (s)', battery.dischargingTime);
+       } catch (err) {
+         addInfo('Battery API', 'Niedostępne lub błąd');
+       }
+     } else {
+       addInfo('Battery API', 'Niedostępne w tej przeglądarce');
+     }
+     // 11. NETWORK INFORMATION API (nie we wszystkich przeglądarkach)
+     // Może udostępniać np. navigator.connection.downlink, effectiveType, rtt, saveData
+     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+     if (connection) {
+       addInfo('Typ połączenia', connection.type || 'n/a');
+       addInfo('Przepustowość łącza (Mb/s)', connection.downlink || 'n/a');
+       addInfo('RTT (ms)', connection.rtt || 'n/a');
+       addInfo('effectiveType', connection.effectiveType || 'n/a');
+       addInfo('Oszczędzanie danych (saveData)', connection.saveData ? 'tak' : 'nie');
+     } else {
+       addInfo('NetworkInformation API', 'Niedostępne w tej przeglądarce');
+     }
+     // 12. WEBGL - Ustalenie renderer i vendor GPU (fingerprinting)
+     // Próbujemy utworzyć kontekst WebGL i wyciągnąć informacje o karcie graf.
+     try {
+       const canvas = document.createElement('canvas');
+       const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+       if (gl) {
+         const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+         if (debugInfo) {
+           const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+           const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+           addInfo('WEBGL GPU Renderer', renderer);
+           addInfo('WEBGL GPU Vendor', vendor);
+         } else {
+           addInfo('WEBGL_debug_renderer_info', 'Niedostępne');
+         }
+       } else {
+         addInfo('WebGL', 'Nie udało się utworzyć kontekstu');
+       }
+     } catch (err) {
+       addInfo('WebGL', 'Błąd lub niedostępne');
+     }
+     // 13. PLUGINS (starsze API, głównie w Chrome/Firefox; w Safari/Edge często puste)
+     if (navigator.plugins) {
+       const pluginsArr = Array.from(navigator.plugins).map(p => p.name).join(', ') || 'brak';
+       addInfo('Zainstalowane wtyczki (navigator.plugins)', pluginsArr);
+     } else {
+       addInfo('navigator.plugins', 'Niedostępne');
+     }
+     // Podsumowanie lub dalsze działania:
+     addInfo(
+       'Podsumowanie',
+       'Zebrano powyższe dane (o ile były dostępne). Zwróć uwagę, że nowoczesne przeglądarki mogą blokować część informacji.'
+     );
+   });
 </script>
 </body>
 </html>
