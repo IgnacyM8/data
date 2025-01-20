@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wyświetlanie danych cookies</title>
+<style>
+   body {
+     font-family: Arial, sans-serif;
+     margin: 20px;
+     text-align: center;
+   }
+   #cookie-banner {
+     padding: 20px;
+     border: 1px solid #ccc;
+     background-color: #f9f9f9;
+     margin-bottom: 20px;
+   }
+   #cookie-data {
+     margin-top: 20px;
+     white-space: pre-wrap;
+     background: #f4f4f4;
+     padding: 10px;
+     border: 1px solid #ddd;
+   }
+   button {
+     padding: 10px 20px;
+     font-size: 16px;
+     cursor: pointer;
+   }
+</style>
+</head>
+<body>
+<h1>Wyświetlanie danych cookies</h1>
+<div id="cookie-banner">
+<p>Ta strona używa plików cookie. Czy zgadzasz się na ich odczyt i wyświetlenie?</p>
+<button onclick="showCookies()">Akceptuję</button>
+</div>
+<div id="cookie-data" style="display: none;">
+<h2>Twoje dane cookies:</h2>
+<div id="cookies"></div>
+</div>
+<script>
+   function showCookies() {
+     // Ukryj baner
+     document.getElementById("cookie-banner").style.display = "none";
+     // Pobierz ciasteczka użytkownika
+     const cookies = document.cookie;
+     // Wyświetl dane cookies na stronie
+     const cookieDataDiv = document.getElementById("cookie-data");
+     const cookiesDiv = document.getElementById("cookies");
+     if (cookies) {
+       cookiesDiv.textContent = cookies;
+     } else {
+       cookiesDiv.textContent = "Brak ciasteczek do wyświetlenia.";
+     }
+     cookieDataDiv.style.display = "block";
+   }
+</script>
+</body>
+</html>
